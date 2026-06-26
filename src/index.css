@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --color-knowledge: #6366f1;
+  --color-spirituality: #8b5cf6;
+  --color-finance: #10b981;
+  --color-health: #f43f5e;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: local('Inter');
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100,100,100,0.2) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(100,100,100,0.2);
+  border-radius: 20px;
+}
+
+html {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Selection */
+::selection {
+  background-color: rgba(99,102,241,0.3);
+}
+
+.gradient-knowledge { background: linear-gradient(135deg, #6366f1, #818cf8); }
+.gradient-spirituality { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+.gradient-finance { background: linear-gradient(135deg, #10b981, #34d399); }
+.gradient-health { background: linear-gradient(135deg, #f43f5e, #fb7185); }
+
+/* Glow effects */
+.glow-indigo { box-shadow: 0 0 40px rgba(99,102,241,0.15); }
+.glow-purple { box-shadow: 0 0 40px rgba(139,92,246,0.15); }
+
+/* Smooth transitions */
+.transition-theme {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Focus styles */
+input:focus, select:focus, textarea:focus, button:focus-visible {
+  outline: none;
+  ring: 2px;
+  ring-color: rgba(99,102,241,0.5);
+}
+
+/* Select styling for dark mode */
+.dark select option {
+  background: #1a1a25;
+  color: #f1f5f9;
+}
