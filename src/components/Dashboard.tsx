@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { LIFE_AREAS, getArea } from '../constants/areas';
+import { getArea } from '../constants/areas';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { motion } from 'framer-motion';
@@ -9,7 +9,7 @@ import { MobileNav } from './MobileNav';
 
 export function Dashboard() {
   const store = useStore();
-  const { dayTasks, weekGoals, monthGoals, yearGoals, habits, theme, toggleTask } = store;
+  const { dayTasks, weekGoals, monthGoals, yearGoals, habits, theme, toggleTask, lifeAreas } = store;
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
@@ -28,7 +28,7 @@ export function Dashboard() {
   const completedHabitsToday = todayHabits.filter(h => h.completedDates.includes(todayStr)).length;
 
   // Area stats
-  const areaStats = LIFE_AREAS.map(area => {
+  const areaStats = lifeAreas.map(area => {
     const areaTasks = dayTasks.filter(t => t.areaId === area.id);
     const completed = areaTasks.filter(t => t.completed).length;
     const total = areaTasks.length;
@@ -57,10 +57,10 @@ export function Dashboard() {
 
       {isEmpty && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`${cardClass} p-8 text-center mb-8`}>
-          <p className="text-4xl mb-4">🧭</p>
-          <h2 className="text-lg font-semibold mb-2">Добро пожаловать в Life Compass</h2>
+          <p className="text-4xl mb-4">✦</p>
+          <h2 className="text-lg font-semibold mb-2">С чего начнём?</h2>
           <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-            Начните стратегическое планирование жизни.
+            Добавьте задачу, создайте свою сферу или запишите первую мысль.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <button
@@ -70,12 +70,20 @@ export function Dashboard() {
               + Добавить задачу
             </button>
             <button
-              onClick={() => useStore.getState().setView('goals')}
+              onClick={() => useStore.getState().setView('areas')}
               className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 theme === 'dark' ? 'bg-white/[0.06] hover:bg-white/[0.1] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
               }`}
             >
-              Создать цель
+              Настроить сферы
+            </button>
+            <button
+              onClick={() => useStore.getState().setView('notes')}
+              className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                theme === 'dark' ? 'bg-white/[0.06] hover:bg-white/[0.1] text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            >
+              Новая заметка
             </button>
           </div>
         </motion.div>
@@ -132,7 +140,7 @@ export function Dashboard() {
           ) : (
             <div className="space-y-1">
               {todayTasks.sort((a,b) => (a.startTime||'99').localeCompare(b.startTime||'99')).map((task, i) => {
-                const area = getArea(task.areaId);
+                const area = getArea(lifeAreas, task.areaId);
                 return (
                   <motion.div
                     key={task.id}
@@ -239,7 +247,7 @@ export function Dashboard() {
           ) : (
             <div className="space-y-2">
               {weekGoals.map((g) => {
-                const area = getArea(g.areaId);
+                const area = getArea(lifeAreas, g.areaId);
                 return (
                   <div key={g.id} className={`flex items-center gap-2 p-2 rounded-lg ${
                     theme === 'dark' ? 'bg-white/[0.02]' : 'bg-gray-50'
@@ -272,7 +280,7 @@ export function Dashboard() {
           ) : (
             <div className="space-y-2">
               {currentMonthGoals.map((g) => {
-                const area = getArea(g.areaId);
+                const area = getArea(lifeAreas, g.areaId);
                 return (
                   <div key={g.id} className={`p-2 rounded-lg ${
                     theme === 'dark' ? 'bg-white/[0.02]' : 'bg-gray-50'
@@ -346,7 +354,7 @@ export function Dashboard() {
                 </div>
                 <div className="space-y-1">
                   {currentYearGoals.slice(0, 4).map((g) => {
-                    const area = getArea(g.areaId);
+                    const area = getArea(lifeAreas, g.areaId);
                     // считаем реальный прогресс для каждой годовой цели
                     const linkedMonthGoals = monthGoals.filter(m => m.yearGoalId === g.id);
                     const linkedWeekGoals = linkedMonthGoals.flatMap(m => weekGoals.filter(w => w.monthGoalId === m.id));

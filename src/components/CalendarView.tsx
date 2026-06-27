@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { PointerEvent, useMemo, useRef, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { getArea } from '../constants/areas';
-import { TaskDay, Habit, CalendarView as CalView } from '../types';
+import { TaskDay, Habit, LifeArea, CalendarView as CalView } from '../types';
 import { format, addDays, startOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, parseISO, isToday, addMonths, subMonths } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +11,7 @@ import { MobileNav } from './MobileNav';
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 export function CalendarView() {
-  const { dayTasks, habits, calendarView, setCalendarView, selectedDate, setSelectedDate, theme, toggleTask } = useStore();
+  const { dayTasks, habits, lifeAreas, calendarView, setCalendarView, selectedDate, setSelectedDate, theme, toggleTask, updateDayTask } = useStore();
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const currentDate = parseISO(selectedDate);
@@ -68,10 +68,10 @@ export function CalendarView() {
 
       <AnimatePresence mode="wait">
         <motion.div key={calendarView + selectedDate} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
-          {calendarView === 'day' && <DayViewComp date={currentDate} tasks={dayTasks} theme={theme} toggleTask={toggleTask} cardClass={cardClass} onTaskClick={openTask} onNewTask={newTask} />}
-          {calendarView === 'week' && <WeekViewComp date={currentDate} tasks={dayTasks} theme={theme} cardClass={cardClass} onTaskClick={openTask} onNewTask={newTask} />}
-          {calendarView === 'month' && <MonthViewComp date={currentDate} tasks={dayTasks} habits={habits} theme={theme} setSelectedDate={setSelectedDate} setCalendarView={setCalendarView} cardClass={cardClass} />}
-          {calendarView === 'agenda' && <AgendaViewComp tasks={dayTasks} theme={theme} toggleTask={toggleTask} cardClass={cardClass} onTaskClick={openTask} />}
+          {calendarView === 'day' && <DayViewComp date={currentDate} tasks={dayTasks} lifeAreas={lifeAreas} theme={theme} toggleTask={toggleTask} updateDayTask={updateDayTask} cardClass={cardClass} onTaskClick={openTask} onNewTask={newTask} />}
+          {calendarView === 'week' && <WeekViewComp date={currentDate} tasks={dayTasks} lifeAreas={lifeAreas} theme={theme} cardClass={cardClass} onTaskClick={openTask} onNewTask={newTask} />}
+          {calendarView === 'month' && <MonthViewComp date={currentDate} tasks={dayTasks} habits={habits} lifeAreas={lifeAreas} theme={theme} setSelectedDate={setSelectedDate} setCalendarView={setCalendarView} cardClass={cardClass} />}
+          {calendarView === 'agenda' && <AgendaViewComp tasks={dayTasks} lifeAreas={lifeAreas} theme={theme} toggleTask={toggleTask} cardClass={cardClass} onTaskClick={openTask} />}
         </motion.div>
       </AnimatePresence>
 
@@ -80,13 +80,58 @@ export function CalendarView() {
   );
 }
 
-interface DayProps { date: Date; tasks: TaskDay[]; theme: string; toggleTask: (id: string) => void; cardClass: string; onTaskClick: (id: string) => void; onNewTask: () => void; }
+interface DayProps { date: Date; tasks: TaskDay[]; lifeAreas: LifeArea[]; theme: string; toggleTask: (id: string) => void; updateDayTask: (id: string, task: Partial<TaskDay>) => void; cardClass: string; onTaskClick: (id: string) => void; onNewTask: () => void; }
 
-function DayViewComp({ date, tasks, theme, toggleTask, cardClass, onTaskClick, onNewTask }: DayProps) {
+function DayViewComp({ date, tasks, lifeAreas, theme, toggleTask, updateDayTask, cardClass, onTaskClick, onNewTask }: DayProps) {
   const dateStr = format(date, 'yyyy-MM-dd');
   const dayTasks = tasks.filter((t: TaskDay) => t.date === dateStr);
   const timedTasks = dayTasks.filter((t: TaskDay) => t.startTime);
   const untimedTasks = dayTasks.filter((t: TaskDay) => !t.startTime);
+  const [preview, setPreview] = useState<{ taskId: string; startTime: string; endTime: string } | null>(null);
+  const dragMovedRef = useRef(false);
+
+  const startTimeEdit = (event: PointerEvent<HTMLDivElement>, task: TaskDay, mode: 'move' | 'resize') => {
+    if (!task.startTime) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const startY = event.clientY;
+    const originalStart = timeToMinutes(task.startTime);
+    const originalEnd = timeToMinutes(task.endTime) || originalStart + 60;
+    dragMovedRef.current = false;
+
+    const onPointerMove = (moveEvent: globalThis.PointerEvent) => {
+      const rawDelta = moveEvent.clientY - startY;
+      const delta = Math.round(rawDelta / 15) * 15;
+      if (Math.abs(rawDelta) > 4) dragMovedRef.current = true;
+
+      if (mode === 'move') {
+        const duration = Math.max(15, originalEnd - originalStart);
+        const nextStart = clampMinutes(originalStart + delta);
+        const nextEnd = clampMinutes(nextStart + duration);
+        setPreview({ taskId: task.id, startTime: minutesToTime(nextStart), endTime: minutesToTime(nextEnd) });
+      } else {
+        const nextEnd = Math.max(originalStart + 15, clampMinutes(originalEnd + delta));
+        setPreview({ taskId: task.id, startTime: minutesToTime(originalStart), endTime: minutesToTime(nextEnd) });
+      }
+    };
+
+    const onPointerUp = () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      const current = useStore.getState().dayTasks.find((t) => t.id === task.id);
+      setPreview((p) => {
+        if (p && current) updateDayTask(task.id, { startTime: p.startTime, endTime: p.endTime });
+        return null;
+      });
+      window.setTimeout(() => {
+        dragMovedRef.current = false;
+      }, 0);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
 
   return (
     <div className={cardClass + ' overflow-hidden'}>
@@ -98,7 +143,7 @@ function DayViewComp({ date, tasks, theme, toggleTask, cardClass, onTaskClick, o
       {untimedTasks.length > 0 && (
         <div className={`px-4 py-2 border-b ${theme === 'dark' ? 'border-white/[0.06] bg-white/[0.01]' : 'border-gray-100 bg-gray-50/50'}`}>
           {untimedTasks.map((task: TaskDay) => {
-            const area = getArea(task.areaId);
+            const area = getArea(lifeAreas, task.areaId);
             return (
               <div key={task.id} className="flex items-center gap-2 py-1 cursor-pointer" onClick={() => onTaskClick(task.id)}>
                 <button onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }}
@@ -122,19 +167,30 @@ function DayViewComp({ date, tasks, theme, toggleTask, cardClass, onTaskClick, o
               {timedTasks
                 .filter((t: TaskDay) => parseInt(t.startTime!.split(':')[0]) === hour)
                 .map((task: TaskDay) => {
-                  const area = getArea(task.areaId);
-                  const startMin = parseInt(task.startTime!.split(':')[1] || '0');
-                  const endH = task.endTime ? parseInt(task.endTime.split(':')[0]) : hour + 1;
-                  const endMin = task.endTime ? parseInt(task.endTime.split(':')[1] || '0') : 0;
+                  const area = getArea(lifeAreas, task.areaId);
+                  const activePreview = preview?.taskId === task.id ? preview : null;
+                  const visibleStart = activePreview?.startTime ?? task.startTime!;
+                  const visibleEnd = activePreview?.endTime ?? task.endTime;
+                  const startMin = parseInt(visibleStart.split(':')[1] || '0');
+                  const endH = visibleEnd ? parseInt(visibleEnd.split(':')[0]) : hour + 1;
+                  const endMin = visibleEnd ? parseInt(visibleEnd.split(':')[1] || '0') : 0;
                   const duration = (endH - hour) * 60 + (endMin - startMin);
                   const height = Math.max(duration, 20);
 
                   return (
-                    <div key={task.id} onClick={() => onTaskClick(task.id)}
-                      className="absolute left-1 right-2 rounded-lg px-2 py-1 cursor-pointer transition-all hover:opacity-80 overflow-hidden"
+                    <div key={task.id}
+                      onPointerDown={(e) => startTimeEdit(e, task, 'move')}
+                      onClick={() => {
+                        if (!dragMovedRef.current) onTaskClick(task.id);
+                      }}
+                      className="absolute left-1 right-2 rounded-lg px-2 py-1 cursor-grab active:cursor-grabbing transition-all hover:opacity-80 overflow-hidden touch-none select-none"
                       style={{ top: `${startMin}px`, height: `${height}px`, background: area.bgColor, borderLeft: `3px solid ${area.color}` }}>
                       <p className="text-[11px] font-medium truncate" style={{ color: area.color }}>{task.title}</p>
-                      <p className="text-[10px] opacity-60" style={{ color: area.color }}>{task.startTime} — {task.endTime || ''}</p>
+                      <p className="text-[10px] opacity-60" style={{ color: area.color }}>{visibleStart} — {visibleEnd || ''}</p>
+                      <div
+                        onPointerDown={(e) => startTimeEdit(e, task, 'resize')}
+                        className="absolute left-2 right-2 bottom-0 h-2 cursor-ns-resize"
+                      />
                     </div>
                   );
                 })}
@@ -146,9 +202,26 @@ function DayViewComp({ date, tasks, theme, toggleTask, cardClass, onTaskClick, o
   );
 }
 
-interface WeekProps { date: Date; tasks: TaskDay[]; theme: string; cardClass: string; onTaskClick: (id: string) => void; onNewTask: () => void; }
+function timeToMinutes(time?: string) {
+  if (!time) return 0;
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
 
-function WeekViewComp({ date, tasks, theme, cardClass, onTaskClick, onNewTask }: WeekProps) {
+function minutesToTime(value: number) {
+  const minutes = clampMinutes(value);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function clampMinutes(value: number) {
+  return Math.min(23 * 60 + 45, Math.max(0, Math.round(value / 15) * 15));
+}
+
+interface WeekProps { date: Date; tasks: TaskDay[]; lifeAreas: LifeArea[]; theme: string; cardClass: string; onTaskClick: (id: string) => void; onNewTask: () => void; }
+
+function WeekViewComp({ date, tasks, lifeAreas, theme, cardClass, onTaskClick, onNewTask }: WeekProps) {
   const ws = startOfWeek(date, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
 
@@ -173,7 +246,7 @@ function WeekViewComp({ date, tasks, theme, cardClass, onTaskClick, onNewTask }:
               return (
                 <div key={ds + hour} className={`h-[50px] border-l relative ${theme === 'dark' ? 'border-white/[0.04]' : 'border-gray-50'}`}>
                   {hourTasks.map((task: TaskDay) => {
-                    const area = getArea(task.areaId);
+                    const area = getArea(lifeAreas, task.areaId);
                     return (
                       <div key={task.id} onClick={() => onTaskClick(task.id)}
                         className="absolute inset-x-0.5 rounded px-1 py-0.5 cursor-pointer text-[9px] overflow-hidden hover:opacity-80 transition-opacity"
@@ -195,9 +268,9 @@ function WeekViewComp({ date, tasks, theme, cardClass, onTaskClick, onNewTask }:
   );
 }
 
-interface MonthProps { date: Date; tasks: TaskDay[]; habits: Habit[]; theme: string; setSelectedDate: (d: string) => void; setCalendarView: (v: CalView) => void; cardClass: string; }
+interface MonthProps { date: Date; tasks: TaskDay[]; habits: Habit[]; lifeAreas: LifeArea[]; theme: string; setSelectedDate: (d: string) => void; setCalendarView: (v: CalView) => void; cardClass: string; }
 
-function MonthViewComp({ date, tasks, habits, theme, setSelectedDate, setCalendarView, cardClass }: MonthProps) {
+function MonthViewComp({ date, tasks, habits, lifeAreas, theme, setSelectedDate, setCalendarView, cardClass }: MonthProps) {
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
   const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -228,14 +301,14 @@ function MonthViewComp({ date, tasks, habits, theme, setSelectedDate, setCalenda
               <div className="space-y-0.5">
                 {dt.slice(0, 3).map((t: TaskDay) => (
                   <div key={t.id} className="flex items-center gap-1">
-                    <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: getArea(t.areaId).color }} />
+                    <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: getArea(lifeAreas, t.areaId).color }} />
                     <span className={`text-[9px] truncate ${t.completed ? 'line-through opacity-50' : ''}`}>{t.title}</span>
                   </div>
                 ))}
                 {dt.length > 3 && <p className={`text-[9px] ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>+{dt.length - 3}</p>}
                 {dh.length > 0 && (
                   <div className="flex gap-0.5 mt-0.5">
-                    {dh.slice(0, 4).map((h: Habit) => <span key={h.id} className="w-1.5 h-1.5 rounded-full" style={{ background: getArea(h.areaId).color }} />)}
+                    {dh.slice(0, 4).map((h: Habit) => <span key={h.id} className="w-1.5 h-1.5 rounded-full" style={{ background: getArea(lifeAreas, h.areaId).color }} />)}
                   </div>
                 )}
               </div>
@@ -247,9 +320,9 @@ function MonthViewComp({ date, tasks, habits, theme, setSelectedDate, setCalenda
   );
 }
 
-interface AgendaProps { tasks: TaskDay[]; theme: string; toggleTask: (id: string) => void; cardClass: string; onTaskClick: (id: string) => void; }
+interface AgendaProps { tasks: TaskDay[]; lifeAreas: LifeArea[]; theme: string; toggleTask: (id: string) => void; cardClass: string; onTaskClick: (id: string) => void; }
 
-function AgendaViewComp({ tasks, theme, toggleTask, cardClass, onTaskClick }: AgendaProps) {
+function AgendaViewComp({ tasks, lifeAreas, theme, toggleTask, cardClass, onTaskClick }: AgendaProps) {
   const today = new Date();
   const groups = useMemo(() => {
     const todayStr = format(today, 'yyyy-MM-dd');
@@ -278,7 +351,7 @@ function AgendaViewComp({ tasks, theme, toggleTask, cardClass, onTaskClick }: Ag
           </div>
           <div>
             {group.items.sort((a: TaskDay, b: TaskDay) => (a.startTime || '99').localeCompare(b.startTime || '99')).map((task: TaskDay) => {
-              const area = getArea(task.areaId);
+              const area = getArea(lifeAreas, task.areaId);
               return (
                 <div key={task.id} className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b last:border-0 ${
                   theme === 'dark' ? 'hover:bg-white/[0.02] border-white/[0.04]' : 'hover:bg-gray-50 border-gray-50'

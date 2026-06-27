@@ -7,11 +7,14 @@ import {
   GoalWeek,
   TaskDay,
   Habit,
+  LifeArea,
+  Note,
   ViewMode,
   CalendarView,
   ThemeMode,
 } from '../types';
 import { format } from 'date-fns';
+import { DEFAULT_LIFE_AREAS, createAreaColors } from '../constants/areas';
 
 interface AppState {
   // Navigation
@@ -24,11 +27,13 @@ interface AppState {
   searchQuery: string;
 
   // Data
+  lifeAreas: LifeArea[];
   yearGoals: GoalYear[];
   monthGoals: GoalMonth[];
   weekGoals: GoalWeek[];
   dayTasks: TaskDay[];
   habits: Habit[];
+  notes: Note[];
 
   // Actions - Navigation
   setView: (v: ViewMode) => void;
@@ -39,6 +44,11 @@ interface AppState {
   setCommandPaletteOpen: (o: boolean) => void;
   setPlanningOpen: (o: boolean) => void;
   setSearchQuery: (q: string) => void;
+
+  // Actions - Life Areas
+  addLifeArea: (area: Omit<LifeArea, 'id' | 'bgColor' | 'borderColor' | 'subcategories' | 'createdAt'> & { subcategories?: string[] }) => void;
+  updateLifeArea: (id: string, area: Partial<LifeArea>) => void;
+  deleteLifeArea: (id: string) => void;
 
   // Actions - Year Goals
   addYearGoal: (g: Omit<GoalYear, 'id' | 'createdAt' | 'progress'>) => void;
@@ -66,6 +76,12 @@ interface AppState {
   updateHabit: (id: string, h: Partial<Habit>) => void;
   deleteHabit: (id: string) => void;
   toggleHabitDate: (id: string, date: string) => void;
+
+  // Actions - Notes
+  addNote: (n: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'pinned'> & { pinned?: boolean }) => void;
+  updateNote: (id: string, n: Partial<Note>) => void;
+  deleteNote: (id: string) => void;
+  toggleNotePinned: (id: string) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -81,11 +97,13 @@ export const useStore = create<AppState>()(
       searchQuery: '',
 
       // Data defaults
+      lifeAreas: DEFAULT_LIFE_AREAS,
       yearGoals: [],
       monthGoals: [],
       weekGoals: [],
       dayTasks: [],
       habits: [],
+      notes: [],
 
       // Navigation actions
       setView: (v) => set({ view: v }),
@@ -96,6 +114,45 @@ export const useStore = create<AppState>()(
       setCommandPaletteOpen: (o) => set({ commandPaletteOpen: o }),
       setPlanningOpen: (o) => set({ planningOpen: o }),
       setSearchQuery: (q) => set({ searchQuery: q }),
+
+      // Life Areas
+      addLifeArea: (area) =>
+        set((s) => {
+          const colors = createAreaColors(area.color);
+          const now = new Date().toISOString();
+          return {
+            lifeAreas: [
+              ...s.lifeAreas,
+              {
+                ...area,
+                id: uuid(),
+                name: area.name || area.nameRu,
+                nameRu: area.nameRu || area.name,
+                subcategories: area.subcategories ?? [],
+                ...colors,
+                createdAt: now,
+              },
+            ],
+          };
+        }),
+      updateLifeArea: (id, area) =>
+        set((s) => ({
+          lifeAreas: s.lifeAreas.map((a) => {
+            if (a.id !== id) return a;
+            const color = area.color ?? a.color;
+            return { ...a, ...area, ...createAreaColors(color), color };
+          }),
+        })),
+      deleteLifeArea: (id) =>
+        set((s) => ({
+          lifeAreas: s.lifeAreas.filter((a) => a.id !== id),
+          yearGoals: s.yearGoals.map((g) => (g.areaId === id ? { ...g, areaId: '' } : g)),
+          monthGoals: s.monthGoals.map((g) => (g.areaId === id ? { ...g, areaId: '' } : g)),
+          weekGoals: s.weekGoals.map((g) => (g.areaId === id ? { ...g, areaId: '' } : g)),
+          dayTasks: s.dayTasks.map((t) => (t.areaId === id ? { ...t, areaId: '' } : t)),
+          habits: s.habits.map((h) => (h.areaId === id ? { ...h, areaId: '' } : h)),
+          notes: s.notes.map((n) => (n.areaId === id ? { ...n, areaId: undefined, updatedAt: new Date().toISOString() } : n)),
+        })),
 
       // Year Goals
       addYearGoal: (g) =>
@@ -175,9 +232,45 @@ export const useStore = create<AppState>()(
               : h
           ),
         })),
+
+      // Notes
+      addNote: (n) =>
+        set((s) => {
+          const now = new Date().toISOString();
+          return {
+            notes: [
+              ...s.notes,
+              { ...n, id: uuid(), pinned: n.pinned ?? false, createdAt: now, updatedAt: now },
+            ],
+          };
+        }),
+      updateNote: (id, n) =>
+        set((s) => ({
+          notes: s.notes.map((note) =>
+            note.id === id ? { ...note, ...n, updatedAt: new Date().toISOString() } : note
+          ),
+        })),
+      deleteNote: (id) =>
+        set((s) => ({ notes: s.notes.filter((n) => n.id !== id) })),
+      toggleNotePinned: (id) =>
+        set((s) => ({
+          notes: s.notes.map((n) =>
+            n.id === id ? { ...n, pinned: !n.pinned, updatedAt: new Date().toISOString() } : n
+          ),
+        })),
     }),
     {
       name: 'life-compass-storage',
+      version: 1,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<AppState> | undefined;
+        if (!state) return persistedState;
+        return {
+          ...state,
+          lifeAreas: state.lifeAreas?.length ? state.lifeAreas : DEFAULT_LIFE_AREAS,
+          notes: state.notes ?? [],
+        };
+      },
     }
   )
 );

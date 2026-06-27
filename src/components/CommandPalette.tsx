@@ -11,7 +11,7 @@ interface Command {
 }
 
 export function CommandPalette() {
-  const { setCommandPaletteOpen, setView, toggleTheme, setPlanningOpen, theme, dayTasks, yearGoals, weekGoals, habits } = useStore();
+  const { setCommandPaletteOpen, setView, toggleTheme, setPlanningOpen, theme, dayTasks, yearGoals, weekGoals, habits, notes } = useStore();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -32,6 +32,8 @@ export function CommandPalette() {
     { id: 'nav-calendar', label: 'Календарь', icon: '▦', action: () => { setView('calendar'); setCommandPaletteOpen(false); }, category: 'Навигация' },
     { id: 'nav-goals', label: 'Цели', icon: '◎', action: () => { setView('goals'); setCommandPaletteOpen(false); }, category: 'Навигация' },
     { id: 'nav-habits', label: 'Привычки', icon: '↻', action: () => { setView('habits'); setCommandPaletteOpen(false); }, category: 'Навигация' },
+    { id: 'nav-notes', label: 'Заметки', icon: '✎', action: () => { setView('notes'); setCommandPaletteOpen(false); }, category: 'Навигация' },
+    { id: 'nav-areas', label: 'Сферы', icon: '✦', action: () => { setView('areas'); setCommandPaletteOpen(false); }, category: 'Навигация' },
     { id: 'nav-stats', label: 'Статистика', icon: '▤', action: () => { setView('statistics'); setCommandPaletteOpen(false); }, category: 'Навигация' },
   ];
 
@@ -81,6 +83,16 @@ export function CommandPalette() {
             icon: '↻',
             action: () => { setView('habits'); setCommandPaletteOpen(false); },
             category: 'Привычки',
+          })),
+        ...notes
+          .filter(n => n.title.toLowerCase().includes(query.toLowerCase()) || n.content.toLowerCase().includes(query.toLowerCase()))
+          .slice(0, 3)
+          .map(n => ({
+            id: `note-${n.id}`,
+            label: n.title || 'Без названия',
+            icon: '✎',
+            action: () => { setView('notes'); setCommandPaletteOpen(false); },
+            category: 'Заметки',
           })),
       ]
     : [];

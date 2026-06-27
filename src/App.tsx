@@ -5,6 +5,8 @@ import { Dashboard } from './components/Dashboard';
 import { CalendarView } from './components/CalendarView';
 import { GoalsView } from './components/GoalsView';
 import { HabitsView } from './components/HabitsView';
+import { NotesView } from './components/NotesView';
+import { AreasView } from './components/AreasView';
 import { StatisticsView } from './components/StatisticsView';
 import { CommandPalette } from './components/CommandPalette';
 import { PlanningWizard } from './components/PlanningWizard';
@@ -33,7 +35,9 @@ export default function App() {
           case '2': useStore.getState().setView('calendar'); break;
           case '3': useStore.getState().setView('goals'); break;
           case '4': useStore.getState().setView('habits'); break;
-          case '5': useStore.getState().setView('statistics'); break;
+          case '5': useStore.getState().setView('notes'); break;
+          case '6': useStore.getState().setView('areas'); break;
+          case '7': useStore.getState().setView('statistics'); break;
           case 't': useStore.getState().toggleTheme(); break;
           case 'p': useStore.getState().setPlanningOpen(true); break;
         }
@@ -49,6 +53,8 @@ export default function App() {
       case 'calendar': return <CalendarView />;
       case 'goals': return <GoalsView />;
       case 'habits': return <HabitsView />;
+      case 'notes': return <NotesView />;
+      case 'areas': return <AreasView />;
       case 'statistics': return <StatisticsView />;
       default: return <Dashboard />;
     }

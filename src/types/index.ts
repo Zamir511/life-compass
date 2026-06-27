@@ -1,4 +1,4 @@
-export type LifeAreaId = 'knowledge' | 'spirituality' | 'finance' | 'health';
+export type LifeAreaId = string;
 
 export interface LifeArea {
   id: LifeAreaId;
@@ -9,6 +9,8 @@ export interface LifeArea {
   bgColor: string;
   borderColor: string;
   subcategories: string[];
+  archived?: boolean;
+  createdAt?: string;
 }
 
 export interface GoalYear {
@@ -78,6 +80,18 @@ export interface CalendarEvent {
   sourceId?: string;
 }
 
-export type ViewMode = 'dashboard' | 'calendar' | 'goals' | 'habits' | 'statistics' | 'planning';
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  areaId?: LifeAreaId;
+  goalId?: string;
+  taskId?: string;
+  pinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ViewMode = 'dashboard' | 'calendar' | 'goals' | 'habits' | 'notes' | 'areas' | 'statistics' | 'planning';
 export type CalendarView = 'day' | 'week' | 'month' | 'agenda';
 export type ThemeMode = 'light' | 'dark';

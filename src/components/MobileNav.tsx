@@ -6,7 +6,8 @@ const navItems: { id: ViewMode; label: string; icon: string }[] = [
   { id: 'calendar', label: 'Календарь', icon: '▦' },
   { id: 'goals', label: 'Цели', icon: '◎' },
   { id: 'habits', label: 'Привычки', icon: '↻' },
-  { id: 'statistics', label: 'Статистика', icon: '▤' },
+  { id: 'notes', label: 'Заметки', icon: '✎' },
+  { id: 'areas', label: 'Сферы', icon: '✦' },
 ];
 
 export function MobileNav() {

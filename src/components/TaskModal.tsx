@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { LIFE_AREAS, getArea } from '../constants/areas';
+import { getArea } from '../constants/areas';
 import { motion } from 'framer-motion';
 // date-fns utils
 import { LifeAreaId } from '../types';
@@ -11,12 +11,12 @@ interface TaskModalProps {
 }
 
 export function TaskModal({ taskId, onClose }: TaskModalProps) {
-  const { dayTasks, weekGoals, monthGoals, yearGoals, addDayTask, updateDayTask, deleteDayTask, theme, selectedDate } = useStore();
+  const { dayTasks, weekGoals, monthGoals, yearGoals, lifeAreas, addDayTask, updateDayTask, deleteDayTask, theme, selectedDate } = useStore();
   const task = taskId ? dayTasks.find(t => t.id === taskId) : null;
 
   const [title, setTitle] = useState(task?.title || '');
   const [description, setDescription] = useState(task?.description || '');
-  const [areaId, setAreaId] = useState<LifeAreaId>(task?.areaId || 'knowledge');
+  const [areaId, setAreaId] = useState<LifeAreaId>(task?.areaId || lifeAreas[0]?.id || '');
   const [weekGoalId, setWeekGoalId] = useState(task?.weekGoalId || '');
   const [date, setDate] = useState(task?.date || selectedDate);
   const [startTime, setStartTime] = useState(task?.startTime || '');
@@ -96,7 +96,7 @@ export function TaskModal({ taskId, onClose }: TaskModalProps) {
           }`}>
             <p className={`font-medium mb-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Цепочка целей:</p>
             <div className="flex items-center gap-2">
-              <span className="text-base">{getArea(yearGoal.areaId).icon}</span>
+              <span className="text-base">{getArea(lifeAreas, yearGoal.areaId).icon}</span>
               <span>Год: {yearGoal.title}</span>
             </div>
             {monthGoal && (
@@ -141,7 +141,7 @@ export function TaskModal({ taskId, onClose }: TaskModalProps) {
             <div>
               <label className={labelClass}>Сфера жизни</label>
               <select value={areaId} onChange={(e) => setAreaId(e.target.value as LifeAreaId)} className={inputClass}>
-                {LIFE_AREAS.map(a => (
+                {lifeAreas.map(a => (
                   <option key={a.id} value={a.id}>{a.icon} {a.nameRu}</option>
                 ))}
               </select>

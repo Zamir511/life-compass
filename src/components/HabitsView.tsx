@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { LIFE_AREAS, getArea } from '../constants/areas';
+import { getArea } from '../constants/areas';
 import { LifeAreaId } from '../types';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -8,10 +8,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MobileNav } from './MobileNav';
 
 export function HabitsView() {
-  const { theme, habits, addHabit, deleteHabit, toggleHabitDate } = useStore();
+  const { theme, habits, addHabit, deleteHabit, toggleHabitDate, lifeAreas } = useStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newArea, setNewArea] = useState<LifeAreaId>('knowledge');
+  const [newArea, setNewArea] = useState<LifeAreaId>(lifeAreas[0]?.id ?? '');
 
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
@@ -61,7 +61,7 @@ export function HabitsView() {
         </div>
         <div className="space-y-2">
           {habits.map(h => {
-            const area = getArea(h.areaId);
+            const area = getArea(lifeAreas, h.areaId);
             const done = h.completedDates.includes(todayStr);
             return (
               <motion.div key={h.id} whileTap={{ scale: 0.98 }}
@@ -109,7 +109,7 @@ export function HabitsView() {
               </thead>
               <tbody>
                 {habits.map(h => {
-                  const area = getArea(h.areaId);
+                  const area = getArea(lifeAreas, h.areaId);
                   return (
                     <tr key={h.id} className={`border-t ${theme === 'dark' ? 'border-white/[0.04]' : 'border-gray-50'}`}>
                       <td className="py-2 text-sm">{h.title}</td>
@@ -143,7 +143,7 @@ export function HabitsView() {
           <h2 className="text-base font-semibold mb-4">30 дней</h2>
           <div className="space-y-3">
             {habits.map(h => {
-              const area = getArea(h.areaId);
+              const area = getArea(lifeAreas, h.areaId);
               const streak = getStreak(h.completedDates, todayStr);
               return (
                 <div key={h.id} className="group">
@@ -199,7 +199,7 @@ export function HabitsView() {
                 <div>
                   <label className={`text-xs font-medium mb-1 block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Сфера</label>
                   <select value={newArea} onChange={e => setNewArea(e.target.value as LifeAreaId)} className={inputClass}>
-                    {LIFE_AREAS.map(a => <option key={a.id} value={a.id}>{a.icon} {a.nameRu}</option>)}
+                    {lifeAreas.map(a => <option key={a.id} value={a.id}>{a.icon} {a.nameRu}</option>)}
                   </select>
                 </div>
               </div>

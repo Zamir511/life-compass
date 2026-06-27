@@ -7,11 +7,11 @@ import { motion } from 'framer-motion';
 import { LifeAreaId } from '../types';
 
 export function PlanningWizard() {
-  const { theme, setPlanningOpen, dayTasks, weekGoals, addDayTask } = useStore();
+  const { theme, setPlanningOpen, dayTasks, weekGoals, lifeAreas, addDayTask } = useStore();
   const [step, setStep] = useState(0);
   const [newTasks, setNewTasks] = useState<{ title: string; areaId: LifeAreaId; weekGoalId: string; startTime: string; endTime: string }[]>([]);
   const [newTitle, setNewTitle] = useState('');
-  const [newArea, setNewArea] = useState<LifeAreaId>('knowledge');
+  const [newArea, setNewArea] = useState<LifeAreaId>(lifeAreas[0]?.id ?? '');
   const [newWeekGoal, setNewWeekGoal] = useState('');
   const [newStart, setNewStart] = useState('09:00');
   const [newEnd, setNewEnd] = useState('10:00');
@@ -121,7 +121,7 @@ export function PlanningWizard() {
               )}
             </div>
             {todayTasks.map(t => {
-              const area = getArea(t.areaId);
+              const area = getArea(lifeAreas, t.areaId);
               return (
                 <div key={t.id} className="flex items-center gap-2 text-sm">
                   <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] ${t.completed ? 'text-white' : theme === 'dark' ? 'border border-gray-600' : 'border border-gray-300'}`}
@@ -144,7 +144,7 @@ export function PlanningWizard() {
               </p>
             ) : (
               activeWeekGoals.map(g => {
-                const area = getArea(g.areaId);
+                const area = getArea(lifeAreas, g.areaId);
                 return (
                   <div key={g.id} className={`flex items-center gap-3 p-3 rounded-xl ${theme === 'dark' ? 'bg-white/[0.03]' : 'bg-gray-50'}`}>
                     <span className="text-lg">{area.icon}</span>
@@ -164,7 +164,7 @@ export function PlanningWizard() {
         {step === 2 && (
           <div className="space-y-3">
             {newTasks.map((t, i) => {
-              const area = getArea(t.areaId);
+              const area = getArea(lifeAreas, t.areaId);
               return (
                 <div key={i} className={`flex items-center gap-2 p-2 rounded-lg ${theme === 'dark' ? 'bg-white/[0.03]' : 'bg-gray-50'}`}>
                   <span className="w-2 h-4 rounded-full" style={{ background: area.color }} />
@@ -178,8 +178,8 @@ export function PlanningWizard() {
               <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Новая задача..." className={inputClass + ' mb-2'} />
               <div className="grid grid-cols-3 gap-2 mb-2">
                 <select value={newArea} onChange={e => setNewArea(e.target.value as LifeAreaId)} className={inputClass}>
-                  {['knowledge', 'spirituality', 'finance', 'health'].map(a => (
-                    <option key={a} value={a}>{getArea(a).icon} {getArea(a).nameRu}</option>
+                  {lifeAreas.map(a => (
+                    <option key={a.id} value={a.id}>{a.icon} {a.nameRu}</option>
                   ))}
                 </select>
                 <input type="time" value={newStart} onChange={e => setNewStart(e.target.value)} className={inputClass} />
@@ -202,7 +202,7 @@ export function PlanningWizard() {
         {step === 3 && (
           <div className="space-y-1">
             {newTasks.sort((a, b) => a.startTime.localeCompare(b.startTime)).map((t, i) => {
-              const area = getArea(t.areaId);
+              const area = getArea(lifeAreas, t.areaId);
               return (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: area.bgColor }}>
                   <div className="text-center" style={{ color: area.color }}>
@@ -232,7 +232,7 @@ export function PlanningWizard() {
             </p>
             <div className="space-y-1 text-left">
               {newTasks.map((t, i) => {
-                const area = getArea(t.areaId);
+                const area = getArea(lifeAreas, t.areaId);
                 return (
                   <div key={i} className="flex items-center gap-2 text-sm">
                     <span className="w-2 h-2 rounded-full" style={{ background: area.color }} />

@@ -1,6 +1,6 @@
 import { LifeArea } from '../types';
 
-export const LIFE_AREAS: LifeArea[] = [
+export const DEFAULT_LIFE_AREAS: LifeArea[] = [
   {
     id: 'knowledge',
     name: 'Knowledge',
@@ -43,4 +43,32 @@ export const LIFE_AREAS: LifeArea[] = [
   },
 ];
 
-export const getArea = (id: string) => LIFE_AREAS.find(a => a.id === id)!;
+export const fallbackArea: LifeArea = {
+  id: 'none',
+  name: 'No area',
+  nameRu: 'Без сферы',
+  icon: '○',
+  color: '#94a3b8',
+  bgColor: 'rgba(148,163,184,0.1)',
+  borderColor: 'rgba(148,163,184,0.3)',
+  subcategories: [],
+};
+
+export const createAreaColors = (color: string) => ({
+  bgColor: hexToRgba(color, 0.1),
+  borderColor: hexToRgba(color, 0.3),
+});
+
+export const getArea = (areas: LifeArea[], id?: string) => {
+  if (!id) return fallbackArea;
+  return areas.find((a) => a.id === id && !a.archived) ?? areas.find((a) => a.id === id) ?? fallbackArea;
+};
+
+function hexToRgba(hex: string, alpha: number) {
+  const normalized = hex.replace('#', '');
+  if (normalized.length !== 6) return `rgba(148,163,184,${alpha})`;
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
