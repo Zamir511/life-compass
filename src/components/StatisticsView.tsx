@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { LIFE_AREAS, getArea } from '../constants/areas';
+import { getArea } from '../constants/areas';
 import { format, subDays, eachDayOfInterval, startOfWeek, endOfWeek, eachWeekOfInterval, subWeeks } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { MobileNav } from './MobileNav';
 
 export function StatisticsView() {
-  const { theme, dayTasks, yearGoals, monthGoals, weekGoals, habits } = useStore();
+  const { theme, dayTasks, yearGoals, monthGoals, weekGoals, habits, lifeAreas } = useStore();
 
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
@@ -20,7 +20,7 @@ export function StatisticsView() {
 
   // Area progress
   const areaProgress = useMemo(() => {
-    return LIFE_AREAS.map(area => {
+    return lifeAreas.map(area => {
       const tasks = dayTasks.filter(t => t.areaId === area.id);
       const completed = tasks.filter(t => t.completed).length;
       const total = tasks.length;
@@ -39,7 +39,7 @@ export function StatisticsView() {
         completedWeekGoals,
       };
     });
-  }, [dayTasks, yearGoals, monthGoals, weekGoals]);
+  }, [dayTasks, yearGoals, monthGoals, weekGoals, lifeAreas]);
 
   // Overall stats
   const totalTasks = dayTasks.length;
@@ -291,7 +291,7 @@ export function StatisticsView() {
             <h2 className="text-base font-semibold mb-4">Серии привычек</h2>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {habitStreaks.map(h => {
-                const area = getArea(h.areaId);
+                const area = getArea(lifeAreas, h.areaId);
                 return (
                   <div key={h.id} className={`p-3 rounded-xl text-center ${theme === 'dark' ? 'bg-white/[0.03]' : 'bg-gray-50'}`}>
                     <p className="text-2xl mb-1">🔥</p>

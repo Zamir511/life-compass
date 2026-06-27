@@ -1,7 +1,6 @@
 import { useStore } from '../store/useStore';
 import { motion } from 'framer-motion';
 import { ViewMode } from '../types';
-import { LIFE_AREAS } from '../constants/areas';
 import { showToast } from './Toast';
 
 const navItems: { id: ViewMode; label: string; icon: string; shortcut: string }[] = [
@@ -9,23 +8,27 @@ const navItems: { id: ViewMode; label: string; icon: string; shortcut: string }[
   { id: 'calendar', label: 'Календарь', icon: '▦', shortcut: '2' },
   { id: 'goals', label: 'Цели', icon: '◎', shortcut: '3' },
   { id: 'habits', label: 'Привычки', icon: '↻', shortcut: '4' },
-  { id: 'statistics', label: 'Статистика', icon: '▤', shortcut: '5' },
+  { id: 'notes', label: 'Заметки', icon: '✎', shortcut: '5' },
+  { id: 'areas', label: 'Сферы', icon: '✦', shortcut: '6' },
+  { id: 'statistics', label: 'Статистика', icon: '▤', shortcut: '7' },
 ];
 
 export function Sidebar() {
   const store = useStore();
-  const { view, setView, theme, toggleTheme, setPlanningOpen, setCommandPaletteOpen, dayTasks, habits } = store;
+  const { view, setView, theme, toggleTheme, setPlanningOpen, setCommandPaletteOpen, dayTasks, habits, lifeAreas } = store;
   
   const today = new Date();
 
   // Экспорт данных в JSON файл
   const exportData = () => {
     const data = {
+      lifeAreas: store.lifeAreas,
       yearGoals: store.yearGoals,
       monthGoals: store.monthGoals,
       weekGoals: store.weekGoals,
       dayTasks: store.dayTasks,
       habits: store.habits,
+      notes: store.notes,
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -47,11 +50,15 @@ export function Sidebar() {
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
-        if (data.yearGoals) data.yearGoals.forEach((g: typeof store.yearGoals[0]) => store.addYearGoal(g));
-        if (data.monthGoals) data.monthGoals.forEach((g: typeof store.monthGoals[0]) => store.addMonthGoal(g));
-        if (data.weekGoals) data.weekGoals.forEach((g: typeof store.weekGoals[0]) => store.addWeekGoal(g));
-        if (data.dayTasks) data.dayTasks.forEach((t: typeof store.dayTasks[0]) => store.addDayTask(t));
-        if (data.habits) data.habits.forEach((h: typeof store.habits[0]) => store.addHabit(h));
+        useStore.setState({
+          lifeAreas: Array.isArray(data.lifeAreas) ? data.lifeAreas : store.lifeAreas,
+          yearGoals: Array.isArray(data.yearGoals) ? data.yearGoals : store.yearGoals,
+          monthGoals: Array.isArray(data.monthGoals) ? data.monthGoals : store.monthGoals,
+          weekGoals: Array.isArray(data.weekGoals) ? data.weekGoals : store.weekGoals,
+          dayTasks: Array.isArray(data.dayTasks) ? data.dayTasks : store.dayTasks,
+          habits: Array.isArray(data.habits) ? data.habits : store.habits,
+          notes: Array.isArray(data.notes) ? data.notes : store.notes,
+        });
         showToast('Данные успешно импортированы!', 'success');
       } catch (err) {
         showToast('Ошибка при импорте файла', 'error');
@@ -169,7 +176,7 @@ export function Sidebar() {
         }`}>
           Сферы жизни
         </div>
-        {LIFE_AREAS.map((area) => {
+        {lifeAreas.map((area) => {
           const areaTasks = dayTasks.filter(t => t.areaId === area.id);
           const areaCompleted = areaTasks.filter(t => t.completed).length;
           return (

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { LIFE_AREAS, getArea } from '../constants/areas';
+import { getArea } from '../constants/areas';
 import { LifeAreaId } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MobileNav } from './MobileNav';
@@ -9,13 +9,13 @@ type GoalLevel = 'year' | 'month' | 'week';
 
 export function GoalsView() {
   const { theme, yearGoals, monthGoals, weekGoals, addYearGoal, addMonthGoal, addWeekGoal,
-    deleteYearGoal, deleteMonthGoal, deleteWeekGoal, updateWeekGoal } = useStore();
+    deleteYearGoal, deleteMonthGoal, deleteWeekGoal, updateWeekGoal, lifeAreas } = useStore();
   const [activeLevel, setActiveLevel] = useState<GoalLevel>('year');
   const [modalOpen, setModalOpen] = useState(false);
   const [filterArea, setFilterArea] = useState<LifeAreaId | 'all'>('all');
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
-  const [newArea, setNewArea] = useState<LifeAreaId>('knowledge');
+  const [newArea, setNewArea] = useState<LifeAreaId>(lifeAreas[0]?.id ?? '');
   const [newParent, setNewParent] = useState('');
 
   const cardClass = theme === 'dark'
@@ -63,7 +63,7 @@ export function GoalsView() {
       const mg = monthGoals.find(g => g.id === goalId);
       if (!mg) return [];
       const yg = yearGoals.find(g => g.id === mg.yearGoalId);
-      return yg ? [{ level: 'Год', title: yg.title, icon: getArea(yg.areaId).icon }] : [];
+      return yg ? [{ level: 'Год', title: yg.title, icon: getArea(lifeAreas, yg.areaId).icon }] : [];
     }
     const wg = weekGoals.find(g => g.id === goalId);
     if (!wg) return [];
@@ -71,8 +71,8 @@ export function GoalsView() {
     const chain: { level: string; title: string; icon: string }[] = [];
     if (mg) {
       const yg = yearGoals.find(g => g.id === mg.yearGoalId);
-      if (yg) chain.push({ level: 'Год', title: yg.title, icon: getArea(yg.areaId).icon });
-      chain.push({ level: 'Месяц', title: mg.title, icon: getArea(mg.areaId).icon });
+      if (yg) chain.push({ level: 'Год', title: yg.title, icon: getArea(lifeAreas, yg.areaId).icon });
+      chain.push({ level: 'Месяц', title: mg.title, icon: getArea(lifeAreas, mg.areaId).icon });
     }
     return chain;
   };
@@ -112,7 +112,7 @@ export function GoalsView() {
         <div className={`flex items-center rounded-xl p-1 ${theme === 'dark' ? 'bg-white/[0.04]' : 'bg-gray-100'}`}>
           <button onClick={() => setFilterArea('all')}
             className={`px-2 py-1.5 rounded-lg text-xs transition-all ${filterArea === 'all' ? (theme === 'dark' ? 'bg-white/[0.1] text-white' : 'bg-white text-gray-900 shadow-sm') : 'text-gray-400'}`}>Все</button>
-          {LIFE_AREAS.map(a => (
+          {lifeAreas.map(a => (
             <button key={a.id} onClick={() => setFilterArea(a.id)}
               className={`px-2 py-1.5 rounded-lg text-xs transition-all ${filterArea === a.id ? (theme === 'dark' ? 'bg-white/[0.1] text-white' : 'bg-white text-gray-900 shadow-sm') : 'text-gray-400'}`}>
               {a.icon}
@@ -130,7 +130,7 @@ export function GoalsView() {
             </motion.div>
           )}
           {currentGoals.map((goal, i) => {
-            const area = getArea(goal.areaId);
+            const area = getArea(lifeAreas, goal.areaId);
             const chain = getChain(goal.id, activeLevel);
             const isWeek = activeLevel === 'week' && 'completed' in goal;
             return (
@@ -210,7 +210,7 @@ export function GoalsView() {
                 <div>
                   <label className={`text-xs font-medium mb-1 block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Сфера</label>
                   <select value={newArea} onChange={e => setNewArea(e.target.value as LifeAreaId)} className={inputClass}>
-                    {LIFE_AREAS.map(a => <option key={a.id} value={a.id}>{a.icon} {a.nameRu}</option>)}
+                    {lifeAreas.map(a => <option key={a.id} value={a.id}>{a.icon} {a.nameRu}</option>)}
                   </select>
                 </div>
                 {activeLevel !== 'year' && (
